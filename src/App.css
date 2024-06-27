@@ -1,16 +1,78 @@
-.App {
-  text-align: center;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
+}
+
+body {
+  background: linear-gradient(to top, #ffffff, #b6e1f9);
+  width: 300px;
+  margin: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  font-size: 75%;
+  border-radius: 6px;
+}
+.container {
+  padding: 25px;
+  max-height: 330px;
+  background-color: #ccdce0;
+  backdrop-filter: blur(10px);
+  border-radius: 5px;
+  box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
 }
 
 .App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+  padding-bottom: 15px;
+  border-bottom: solid 1.5px #dedede;
+}
+
+.reg-input-container {
+  position: relative;
+  margin: 15px 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  justify-content: space-between;
+  min-height: 35px;
+}
+
+.reg-input {
+  border: none;
+  outline: none;
+  font-size: 16px;
+  width: 100%;
+  padding: 0 10px;
+  background: #f1f1f1;
+  border-radius: 6px;
+  padding-right: 30px;
+  /* Add space for the clear button */
+}
+
+.reg-input:focus,
+.reg-input:hover {
+  outline: solid 3px #ededed;
+}
+
+.clear-button {
+  position: absolute;
+  right: 10px;
+  top: 20%;
+  border: none;
+  background: none;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.clear-button:focus,
+.clear-button:hover {
+  color: rgba(0, 0, 0, 0.87);
+  transform: scale(1.25);
+  transition: transform 0.20s;
 }
 
 .button-grid {
@@ -20,116 +82,56 @@
   margin-top: 20px;
 }
 
-input {
-  margin-right: 10px;
-  position: relative;
-}
-
-input[type="text"] {
-  padding-right: 24px; /* Add space for the clear button */
-}
-
-.clear-button {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.clear-button:hover {
-  color: rgba(255, 255, 255, 0.87);
-}
-
-table {
-  margin-top: 20px;
-  border-collapse: collapse;
-  width: 80%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-th, td {
-  border: 1px solid white;
-  padding: 8px;
-  text-align: center;
-}
-
-th {
-  background-color: #4CAF50;
-}
-
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-  font-synthesis: none;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
+button:not(.clear-button) {
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, transform 0.25s;
 }
 
-button:hover {
-  border-color: #646cff;
+button:active,
+button:hover:not(.clear-button) {
+  transform: scale(1.20);
 }
 
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+@media (prefers-color-scheme: dark) {
+  *{
+    color: #fff;
+  }
+  body {
+    background-color: #0f0e0e;
   }
 
-  a:hover {
-    color: #747bff;
+  .container {
+    background-color: #3e3b46;
+  }
+
+  .reg-input {
+    background: #2c2b2b;
+  }
+
+  .reg-input:focus,
+  .reg-input:hover {
+    outline: solid 3px #303030;
   }
 
   button {
-    background-color: #f9f9f9;
+    background-color: #302a2a;
+  }
+
+  .clear-button {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .clear-button:focus,
+  .clear-button:hover {
+    color: rgba(255, 255, 255, 0.87);
+  }
+
+  .App-header {
+    border-color: #575757;
   }
 }

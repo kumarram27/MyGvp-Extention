@@ -12,6 +12,12 @@ const App = () => {
     extractBatchYear(registrationNumber)
   );
   const [resultsHtml, setResultsHtml] = useState("");
+  const semestersByBatch = {
+  2020: 8,
+  2021: 6,
+  2022: 4,
+  2023: 1
+};
 
   const authorizedRegistrationNumber = "KUMAR";
 
@@ -102,37 +108,39 @@ const App = () => {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <div style={{ position: "relative" }}>
-          <input
-            type="text"
-            className="reg-input"
-            value={registrationNumber}
-            onChange={handleRegNoChange}
-            placeholder="Enter Registration Number"
-          />
-          {registrationNumber && (
-            <button className="clear-button" onClick={handleClearRegNo}>
-              &#x2715;
-            </button>
+      <div className="container">
+        <header className="App-header">
+          <div className="reg-input-container">
+            <input
+              type="text"
+              className="reg-input"
+              value={registrationNumber}
+              onChange={handleRegNoChange}
+              placeholder="Enter Registration Number"
+            />
+            {registrationNumber && (
+              <button className="clear-button" onClick={handleClearRegNo}>
+                &#x2715;
+              </button>
+            )}
+          </div>
+          {batchYear !== null &&
+            registrationNumber !== "21131A0527" &&
+            batchYear &&
+            urls[batchYear] && (
+              <div className="button-grid">
+                {Object.keys(urls[batchYear]).map((sem) => (
+                  <button type="text" key={sem} onClick={() => handleSemesterClick(sem)}>
+                    {sem}
+                  </button>
+                ))}
+              </div>
+            )}
+          {registrationNumber === "21131A0527" && (
+            <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
           )}
-        </div>
-        {batchYear !== null &&
-          registrationNumber !== "21131A0527" &&
-          batchYear &&
-          urls[batchYear] && (
-            <div className="button-grid">
-              {Object.keys(urls[batchYear]).map((sem) => (
-                <button key={sem} onClick={() => handleSemesterClick(sem)}>
-                  {sem}
-                </button>
-              ))}
-            </div>
-          )}
-        {registrationNumber === "21131A0527" && (
-          <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
-        )}
-      </header>
+        </header>
+      </div>
     </div>
   );
 };
