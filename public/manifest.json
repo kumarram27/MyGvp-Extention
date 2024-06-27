@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "MyGVP Extension",
+  "version": "1.0.0",
+  "description": "A browser extension for fetching GVP results",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "icons/gvp.png"
+  },
+  "permissions": ["storage", "activeTab", "scripting", "webRequest"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "128": "icons/gvp.png"
+  },
+  "host_permissions": ["http://*/*", "https://*/*"]
+}
