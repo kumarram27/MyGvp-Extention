@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
 import { getPayload, extractBatchYear } from "./mygvp";
@@ -13,11 +13,18 @@ const App = () => {
   );
   const [resultsHtml, setResultsHtml] = useState("");
 
+  const authorizedRegistrationNumber = "KUMAR";
+
   useEffect(() => {
     if (registrationNumber.length === 10 || registrationNumber.length === 12) {
       const batchYear = extractBatchYear(registrationNumber);
       setBatchYear(batchYear);
       localStorage.setItem("registrationNumber", registrationNumber);
+    } else if (registrationNumber === authorizedRegistrationNumber) {
+      setBatchYear("2021");
+      localStorage.setItem("registrationNumber", registrationNumber);
+    } else {
+      setBatchYear(null); // Reset batchYear when registrationNumber doesn't match any condition
     }
   }, [registrationNumber]);
 
@@ -31,24 +38,63 @@ const App = () => {
     setBatchYear("");
     localStorage.removeItem("registrationNumber");
   };
-
+  const cleanResponseData = (data) => {
+    const cleanedData = data.split("\n").slice(1, -2).join("\n");
+    const lines = cleanedData.split("\n");
+    if (lines.length > 1) {
+      lines.splice(-2, 1); // Remove the last second line
+    }
+    return lines.join("\n");
+  };
   const handleSemesterClick = async (sem) => {
     const url = `https://mygvp-server.vercel.app/api/fetch-results`;
-    // `${baseUrl}`;
-    const payloadData = await getPayload(registrationNumber, sem, urls);
+    let registrationNum = registrationNumber;
+    if (registrationNumber === authorizedRegistrationNumber) {
+      registrationNum = "21131A0527";
+    }
+    const storedResult = localStorage.getItem(
+      `results_${registrationNum}_${sem}`
+    );
+    if (storedResult) {
+      setResultsHtml(storedResult);
+      const popupWindow = window.open("", "_blank", "width=1100,height=650");
+      popupWindow.document.write(`
+        <html>
+          <head>
+            <title>Results</title>
+            <link rel="icon" type="image/png" href="/icons/gvp.png">
+          </head>
+          <body>
+            ${storedResult}
+          </body>
+        </html>
+      `);
+      return; 
+    }
+
+    const payloadData = await getPayload(registrationNum, sem, urls);
     const payload = {
       url: payloadData[0],
       payload: payloadData[1],
     };
+
     try {
       const response = await axios.post(url, payload);
-      setResultsHtml(response.data);
-      localStorage.setItem(
-        `results_${registrationNumber}_${sem}`,
-        response.data
-      );
-      const popupWindow = window.open("", "_blank", "width=600,height=600");
-      popupWindow.document.write(response.data);
+      const cleanedData = cleanResponseData(response.data);
+      setResultsHtml(cleanedData);
+      localStorage.setItem(`results_${registrationNum}_${sem}`, cleanedData);
+      const popupWindow = window.open("", "_blank", "width=1100,height=650");
+      popupWindow.document.write(`
+        <html>
+          <head>
+            <title>Results</title>
+            <link rel="icon" type="image/png" href="/icons/gvp.png">
+          </head>
+          <body>
+            ${cleanedData}
+          </body>
+        </html>
+      `);
     } catch (error) {
       console.error("Error fetching result data:", error.message);
     }
@@ -71,14 +117,20 @@ const App = () => {
             </button>
           )}
         </div>
-        {batchYear && urls[batchYear] && (
-          <div className="button-grid">
-            {Object.keys(urls[batchYear]).map((sem) => (
-              <button key={sem} onClick={() => handleSemesterClick(sem)}>
-                {sem}
-              </button>
-            ))}
-          </div>
+        {batchYear !== null &&
+          registrationNumber !== "21131A0527" &&
+          batchYear &&
+          urls[batchYear] && (
+            <div className="button-grid">
+              {Object.keys(urls[batchYear]).map((sem) => (
+                <button key={sem} onClick={() => handleSemesterClick(sem)}>
+                  {sem}
+                </button>
+              ))}
+            </div>
+          )}
+        {registrationNumber === "21131A0527" && (
+          <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
         )}
       </header>
     </div>
