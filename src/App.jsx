@@ -12,9 +12,12 @@ const App = () => {
     extractBatchYear(registrationNumber)
   );
   const [resultsHtml, setResultsHtml] = useState("");
-  
 
-  const authorizedRegistrationNumber = "KUMAR";
+  const authorizedRegistrationNumber = import.meta.env
+    .VITE_AUTHORIZED_REGISTRATION_NUMBER;
+  const hiddenRegistrationNumbers = (
+    import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS || ""
+  ).split(",");
 
   useEffect(() => {
     if (registrationNumber.length === 10 || registrationNumber.length === 12) {
@@ -39,6 +42,7 @@ const App = () => {
     setBatchYear("");
     localStorage.removeItem("registrationNumber");
   };
+
   const cleanResponseData = (data) => {
     const cleanedData = data.split("\n").slice(1, -2).join("\n");
     const lines = cleanedData.split("\n");
@@ -47,11 +51,12 @@ const App = () => {
     }
     return lines.join("\n");
   };
+
   const handleSemesterClick = async (sem) => {
-    const url = `https://mygvp-server.vercel.app/api/fetch-results`;
+    const url = import.meta.env.VITE_API;
     let registrationNum = registrationNumber;
     if (registrationNumber === authorizedRegistrationNumber) {
-      registrationNum = "21131A0527";
+      registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS; // Use the environment variable here if needed
     }
     const storedResult = localStorage.getItem(
       `results_${registrationNum}_${sem}`
@@ -70,7 +75,7 @@ const App = () => {
           </body>
         </html>
       `);
-      return; 
+      return;
     }
 
     const payloadData = await getPayload(registrationNum, sem, urls);
@@ -120,18 +125,24 @@ const App = () => {
             )}
           </div>
           {batchYear !== null &&
-            registrationNumber !== "21131A0527" &&
+            registrationNumber !==
+              import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS &&
             batchYear &&
             urls[batchYear] && (
               <div className="button-grid">
                 {Object.keys(urls[batchYear]).map((sem) => (
-                  <button type="text" key={sem} onClick={() => handleSemesterClick(sem)}>
+                  <button
+                    type="text"
+                    key={sem}
+                    onClick={() => handleSemesterClick(sem)}
+                  >
                     {sem}
                   </button>
                 ))}
               </div>
             )}
-          {registrationNumber === "21131A0527" && (
+          {registrationNumber ===
+            import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS && (
             <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
           )}
         </header>
