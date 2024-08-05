@@ -12,12 +12,7 @@ const App = () => {
     extractBatchYear(registrationNumber)
   );
   const [resultsHtml, setResultsHtml] = useState("");
-  const semestersByBatch = {
-  2020: 8,
-  2021: 6,
-  2022: 4,
-  2023: 1
-};
+  
 
   const authorizedRegistrationNumber = "KUMAR";
 
