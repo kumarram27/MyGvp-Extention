@@ -1,14 +1,14 @@
 const urls = {
-  credits: {
-    "Sem 1": 19.5,
-    "Sem 2": 19.5,
-    "Sem 3": 21.5,
-    "Sem 4": 21.5,
-    "Sem 5": 21.5,
-    "Sem 6": 21.5,
-    "Sem 7": 23,
-    "Sem 8": 10,
-  },
+  // credits: {
+  //   "Sem 1": 19.5,
+  //   "Sem 2": 19.5,
+  //   "Sem 3": 21.5,
+  //   "Sem 4": 21.5,
+  //   "Sem 5": 21.5,
+  //   "Sem 6": 21.5,
+  //   "Sem 7": 23,
+  //   "Sem 8": 10,
+  // },
   2020: {
     "Sem 1":
       "http://123.108.200.171/Results%20R-2020/Semester-I/B.Tech%20I%20Semester%20Regular%20(R-2020)%20(For%202020%20Admitted%20Batch)%20Result%20-%20August-%202021/btechsearch.asp",

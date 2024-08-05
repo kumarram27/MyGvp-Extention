@@ -3,15 +3,17 @@ import axios from "axios";
 import "./App.css";
 import { getPayload, extractBatchYear } from "./mygvp";
 import urls from "./links";
+import Dropdown from "./Dropdown";
 
 const App = () => {
   const [registrationNumber, setRegistrationNumber] = useState(
     localStorage.getItem("registrationNumber") || ""
   );
   const [batchYear, setBatchYear] = useState(
-    extractBatchYear(registrationNumber)
+    localStorage.getItem(`batchYear_${registrationNumber}`) || ""
   );
   const [resultsHtml, setResultsHtml] = useState("");
+  const [batchYearOptions, setBatchYearOptions] = useState([]);
 
   const authorizedRegistrationNumber = import.meta.env
     .VITE_AUTHORIZED_REGISTRATION_NUMBER;
@@ -20,26 +22,53 @@ const App = () => {
   ).split(",");
 
   useEffect(() => {
+    // Update the local storage and state based on the registration number
     if (registrationNumber.length === 10 || registrationNumber.length === 12) {
-      const batchYear = extractBatchYear(registrationNumber);
-      setBatchYear(batchYear);
-      localStorage.setItem("registrationNumber", registrationNumber);
+      const extractedBatchYear = extractBatchYear(registrationNumber);
+      if (extractedBatchYear) {
+        setBatchYear(extractedBatchYear);
+        localStorage.setItem(
+          `batchYear_${registrationNumber}`,
+          extractedBatchYear
+        );
+      } else {
+        const defaultBatchYear = "2021";
+        setBatchYear(defaultBatchYear);
+      }
     } else if (registrationNumber === authorizedRegistrationNumber) {
-      setBatchYear("2021");
-      localStorage.setItem("registrationNumber", registrationNumber);
+      const defaultBatchYear = "2021";
+      setBatchYear(defaultBatchYear);
+      localStorage.setItem(
+        `batchYear_${registrationNumber}`,
+        defaultBatchYear
+      );
     } else {
-      setBatchYear(null); // Reset batchYear when registrationNumber doesn't match any condition
+      setBatchYear(null);
     }
-  }, [registrationNumber]);
+
+    const availableBatchYears = Object.keys(urls).map((year) =>
+      year
+    );
+    setBatchYearOptions(availableBatchYears);
+
+    // Store registration number in local storage
+    localStorage.setItem("registrationNumber", registrationNumber);
+  }, [registrationNumber, authorizedRegistrationNumber]);
 
   const handleRegNoChange = (event) => {
     const { value } = event.target;
-    setRegistrationNumber(value.toUpperCase()); // Convert to uppercase
+    setRegistrationNumber(value.toUpperCase());
+  };
+
+  const handleBatchYearChange = (selectedYear) => {
+    setBatchYear(selectedYear);
+    localStorage.setItem(`batchYear_${registrationNumber}`, selectedYear);
   };
 
   const handleClearRegNo = () => {
     setRegistrationNumber("");
     setBatchYear("");
+    setBatchYearOptions([]);
     localStorage.removeItem("registrationNumber");
   };
 
@@ -56,7 +85,7 @@ const App = () => {
     const url = import.meta.env.VITE_API;
     let registrationNum = registrationNumber;
     if (registrationNumber === authorizedRegistrationNumber) {
-      registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS; // Use the environment variable here if needed
+      registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
     }
     const storedResult = localStorage.getItem(
       `results_${registrationNum}_${sem}`
@@ -123,16 +152,22 @@ const App = () => {
                 &#x2715;
               </button>
             )}
+            {batchYearOptions.length > 0 && (
+              <Dropdown
+                options={batchYearOptions}
+                selectedOption={batchYear}
+                onOptionSelect={handleBatchYearChange}
+              />
+            )}
           </div>
-          {batchYear !== null &&
+          {batchYear &&
             registrationNumber !==
               import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS &&
-            batchYear &&
             urls[batchYear] && (
               <div className="button-grid">
                 {Object.keys(urls[batchYear]).map((sem) => (
                   <button
-                    type="text"
+                    type="button"
                     key={sem}
                     onClick={() => handleSemesterClick(sem)}
                   >

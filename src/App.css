@@ -16,6 +16,7 @@ body {
   font-size: 75%;
   border-radius: 6px;
 }
+
 .container {
   padding: 25px;
   max-height: 330px;
@@ -48,8 +49,7 @@ body {
   padding: 0 10px;
   background: #f1f1f1;
   border-radius: 6px;
-  padding-right: 30px;
-  /* Add space for the clear button */
+  padding-right: 30px; /* Add space for the clear button */
 }
 
 .reg-input:focus,
@@ -72,7 +72,7 @@ body {
 .clear-button:hover {
   color: rgba(0, 0, 0, 0.87);
   transform: scale(1.25);
-  transition: transform 0.20s;
+  transition: transform 0.2s;
 }
 
 .button-grid {
@@ -92,13 +92,67 @@ button:not(.clear-button) {
   transition: border-color 0.25s, transform 0.25s;
 }
 
-button:active,
-button:hover:not(.clear-button) {
-  transform: scale(1.20);
+/* Dropdown styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-button {
+  position: absolute;
+  background: none;
+  border: none;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  top: 50%; /* Vertically center the button */
+  transform: translateY(-50%);
+  right: 30px; /* Align within the search bar */
+}
+
+.dropdown-menu {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  top: calc(100% + 1px);
+  right: 30px;
+  background-color: rgba(255, 255, 255, 0.02); 
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  border-radius: 5px;
+  width: max-content;
+  margin: 0;
+  padding: 0;
+}
+
+.dropdown-button:focus + .dropdown-menu,
+.dropdown:hover .dropdown-menu {
+  display: flex;
+}
+
+.dropdown-menu .dropdown-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  list-style: none;
+  text-align: left;
+}
+
+.dropdown-menu .dropdown-item:hover {
+  background-color: #545454;
+  backdrop-filter: blur(20px);
+  border-radius: 5px;
+}
+
+/* Ensure dropdown button is excluded from scaling effect */
+button:not(.dropdown-button):active,
+button:not(.dropdown-button):hover {
+  transform: scale(1.2);
 }
 
 @media (prefers-color-scheme: dark) {
-  *{
+  * {
     color: #fff;
   }
   body {

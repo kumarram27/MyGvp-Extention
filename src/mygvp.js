@@ -22,7 +22,7 @@ const extractBatchYear = (registrationNumber) => {
     return "2022";
   if (/^323/.test(registrationNumber) && registrationNumber.length === 12)
     return "2023";
-  return null;
+  return "2021";
 };
 
 const parseResult = (data) => {
