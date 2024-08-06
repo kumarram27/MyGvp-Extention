@@ -71,8 +71,7 @@ const getResults = async (registrationNumber, url) => {
   }
 };
 
-const getPayload = async (registrationNumber, semester, urls) => {
-  const batchYear = extractBatchYear(registrationNumber);
+const getPayload = async (registrationNumber,batchYear, semester, urls) => {
   const url = urls[batchYear] && urls[batchYear][semester];
   if (url) {
     const parsedUrl = new URL(url);

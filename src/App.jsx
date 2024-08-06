@@ -9,9 +9,7 @@ const App = () => {
   const [registrationNumber, setRegistrationNumber] = useState(
     localStorage.getItem("registrationNumber") || ""
   );
-  const [batchYear, setBatchYear] = useState(
-    localStorage.getItem(`batchYear_${registrationNumber}`) || ""
-  );
+  const [batchYear, setBatchYear] = useState("");
   const [resultsHtml, setResultsHtml] = useState("");
   const [batchYearOptions, setBatchYearOptions] = useState([]);
 
@@ -22,38 +20,43 @@ const App = () => {
   ).split(",");
 
   useEffect(() => {
-    // Update the local storage and state based on the registration number
-    if (registrationNumber.length === 10 || registrationNumber.length === 12) {
-      const extractedBatchYear = extractBatchYear(registrationNumber);
-      if (extractedBatchYear) {
+    const availableBatchYears = Object.keys(urls).map((year) => year);
+    setBatchYearOptions(availableBatchYears);
+
+    if (registrationNumber) {
+      // Retrieve the batch year from local storage if available
+      const storedBatchYear = localStorage.getItem(
+        `batchYear_${registrationNumber}`
+      );
+
+      if (storedBatchYear) {
+        setBatchYear(storedBatchYear);
+      } else if (
+        registrationNumber.length === 10 ||
+        registrationNumber.length === 12
+      ) {
+        const extractedBatchYear = extractBatchYear(registrationNumber);
         setBatchYear(extractedBatchYear);
         localStorage.setItem(
           `batchYear_${registrationNumber}`,
           extractedBatchYear
         );
-      } else {
+      } else if (registrationNumber === authorizedRegistrationNumber) {
         const defaultBatchYear = "2021";
         setBatchYear(defaultBatchYear);
+        localStorage.setItem(
+          `batchYear_${registrationNumber}`,
+          defaultBatchYear
+        );
+      } else {
+        setBatchYear(null);
       }
-    } else if (registrationNumber === authorizedRegistrationNumber) {
-      const defaultBatchYear = "2021";
-      setBatchYear(defaultBatchYear);
-      localStorage.setItem(
-        `batchYear_${registrationNumber}`,
-        defaultBatchYear
-      );
-    } else {
-      setBatchYear(null);
+
+      // Store registration number in local storage
+      localStorage.setItem("registrationNumber", registrationNumber);
     }
-
-    const availableBatchYears = Object.keys(urls).map((year) =>
-      year
-    );
-    setBatchYearOptions(availableBatchYears);
-
-    // Store registration number in local storage
-    localStorage.setItem("registrationNumber", registrationNumber);
   }, [registrationNumber, authorizedRegistrationNumber]);
+
 
   const handleRegNoChange = (event) => {
     const { value } = event.target;
@@ -81,19 +84,27 @@ const App = () => {
     return lines.join("\n");
   };
 
-  const handleSemesterClick = async (sem) => {
+  const handleSemesterClick = async (sem, batch) => {
     const url = import.meta.env.VITE_API;
     let registrationNum = registrationNumber;
     if (registrationNumber === authorizedRegistrationNumber) {
       registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
     }
-    const storedResult = localStorage.getItem(
-      `results_${registrationNum}_${sem}`
-    );
+
+    // Ensure batchYear is not null
+    let batchYear =
+      batch || localStorage.getItem(`batchYear_${registrationNum}`);
+
+    const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
+    const storedResult = localStorage.getItem(storageKey);
+
     if (storedResult) {
-      setResultsHtml(storedResult);
-      const popupWindow = window.open("", "_blank", "width=1100,height=650");
-      popupWindow.document.write(`
+      if (!storedResult.trim()) {
+        localStorage.removeItem(storageKey); // Remove empty stored data
+      } else {
+        setResultsHtml(storedResult);
+        const popupWindow = window.open("", "_blank", "width=1100,height=650");
+        popupWindow.document.write(`
         <html>
           <head>
             <title>Results</title>
@@ -104,10 +115,16 @@ const App = () => {
           </body>
         </html>
       `);
+        return;
+      }
+    }
+
+    const payloadData = await getPayload(registrationNum, batchYear, sem, urls);
+    if (!payloadData) {
+      console.error("Invalid payload data.");
       return;
     }
 
-    const payloadData = await getPayload(registrationNum, sem, urls);
     const payload = {
       url: payloadData[0],
       payload: payloadData[1],
@@ -116,24 +133,31 @@ const App = () => {
     try {
       const response = await axios.post(url, payload);
       const cleanedData = cleanResponseData(response.data);
-      setResultsHtml(cleanedData);
-      localStorage.setItem(`results_${registrationNum}_${sem}`, cleanedData);
+
+      if (cleanedData.trim()) {
+        setResultsHtml(cleanedData);
+        localStorage.setItem(storageKey, cleanedData); // Store with updated key
+      } else {
+        console.warn("Received empty result data.");
+      }
+
       const popupWindow = window.open("", "_blank", "width=1100,height=650");
       popupWindow.document.write(`
-        <html>
-          <head>
-            <title>Results</title>
-            <link rel="icon" type="image/png" href="/icons/gvp.png">
-          </head>
-          <body>
-            ${cleanedData}
-          </body>
-        </html>
-      `);
+      <html>
+        <head>
+          <title>Results</title>
+          <link rel="icon" type="image/png" href="/icons/gvp.png">
+        </head>
+        <body>
+          ${cleanedData}
+        </body>
+      </html>
+    `);
     } catch (error) {
       console.error("Error fetching result data:", error.message);
     }
   };
+
 
   return (
     <div className="App">
@@ -169,7 +193,7 @@ const App = () => {
                   <button
                     type="button"
                     key={sem}
-                    onClick={() => handleSemesterClick(sem)}
+                    onClick={() => handleSemesterClick(sem , batchYear)}
                   >
                     {sem}
                   </button>
