@@ -270,10 +270,13 @@ const App = () => {
                         : sem
                       : sem}
                   </button>
-                  
                 ))}
               </div>
             )}
+          {registrationNumber ===
+            import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS && (
+            <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
+          )}
         </header>
       </div>
     </div>
