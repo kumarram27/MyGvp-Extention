@@ -92,6 +92,12 @@ button:not(.clear-button) {
   transition: border-color 0.25s, transform 0.25s;
 }
 
+
+button.hovered {
+  font-size: 10px;
+  transform: scale(1.1);
+  cursor: pointer;
+}
 /* Dropdown styles */
 .dropdown {
   position: relative;

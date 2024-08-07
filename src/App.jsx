@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./App.css";
 import { getPayload, extractBatchYear } from "./mygvp";
@@ -12,6 +12,8 @@ const App = () => {
   const [batchYear, setBatchYear] = useState("");
   const [resultsHtml, setResultsHtml] = useState("");
   const [batchYearOptions, setBatchYearOptions] = useState([]);
+  const [hoveredSemester, setHoveredSemester] = useState(null);
+  const [sgpaInfo, setSgpaInfo] = useState({});
 
   const authorizedRegistrationNumber = import.meta.env
     .VITE_AUTHORIZED_REGISTRATION_NUMBER;
@@ -24,7 +26,6 @@ const App = () => {
     setBatchYearOptions(availableBatchYears);
 
     if (registrationNumber) {
-      // Retrieve the batch year from local storage if available
       const storedBatchYear = localStorage.getItem(
         `batchYear_${registrationNumber}`
       );
@@ -52,111 +53,176 @@ const App = () => {
         setBatchYear(null);
       }
 
-      // Store registration number in local storage
       localStorage.setItem("registrationNumber", registrationNumber);
     }
   }, [registrationNumber, authorizedRegistrationNumber]);
 
-
-  const handleRegNoChange = (event) => {
+  
+  const handleRegNoChange = useCallback((event) => {
     const { value } = event.target;
-    setRegistrationNumber(value.toUpperCase());
-  };
+    let upperCaseValue = value.toUpperCase();
+    setRegistrationNumber(upperCaseValue);
 
-  const handleBatchYearChange = (selectedYear) => {
-    setBatchYear(selectedYear);
-    localStorage.setItem(`batchYear_${registrationNumber}`, selectedYear);
-  };
+    // Clear results and batch year
+    setResultsHtml("");
+    setBatchYear("");
 
-  const handleClearRegNo = () => {
+    if (upperCaseValue === authorizedRegistrationNumber) {
+      upperCaseValue = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
+    }
+    const sgpaData =
+      JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
+    setSgpaInfo(sgpaData);
+  }, []);
+
+
+
+  const handleBatchYearChange = useCallback(
+    (selectedYear) => {
+      setBatchYear(selectedYear);
+      localStorage.setItem(`batchYear_${registrationNumber}`, selectedYear);
+    },
+    [registrationNumber]
+  );
+
+  const handleClearRegNo = useCallback(() => {
     setRegistrationNumber("");
     setBatchYear("");
     setBatchYearOptions([]);
+    setSgpaInfo({});
     localStorage.removeItem("registrationNumber");
+    
+  }, []);
+
+  const extractSGPA = (html) => {
+    const sgpaRegex =
+      /<th align='left'>SGPA<\/th><td colspan='3' align='center'>\s*([\d.]+)\s*<\/td>/;
+    const sgpaMatch = html.match(sgpaRegex);
+
+    if (!sgpaMatch) {
+      const sgpaRegexAlternative =
+        /<b>SGPA<\/b><\/td><td colspan=4><p style='text-align:center;'>([\d.]+)<\/p><\/td>/;
+      const sgpaMatchAlternative = html.match(sgpaRegexAlternative);
+      if (sgpaMatchAlternative) {
+        return parseFloat(sgpaMatchAlternative[1]);
+      }
+      return null;
+    }
+
+    return parseFloat(sgpaMatch[1]);
+  };
+
+  const showPopup = (storedResult) => {
+    const popupWindow = window.open("", "_blank", "width=1100,height=650");
+    if (popupWindow) {
+      popupWindow.document.open();
+      popupWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Results</title>
+          <link rel="icon" type="image/png" href="/icons/gvp.png">
+          <style>
+            body { font-family: Arial, sans-serif; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 8px; text-align: center; border: 1px solid #ddd; }
+            th { background-color: #f2f2f2; }
+          </style>
+        </head>
+        <body>
+          ${storedResult}
+        </body>
+      </html>
+    `);
+      popupWindow.document.close();
+    } else {
+      console.error("Failed to open popup window.");
+    }
   };
 
   const cleanResponseData = (data) => {
     const cleanedData = data.split("\n").slice(1, -2).join("\n");
     const lines = cleanedData.split("\n");
     if (lines.length > 1) {
-      lines.splice(-2, 1); // Remove the last second line
+      lines.splice(-2, 1);
     }
     return lines.join("\n");
   };
 
-  const handleSemesterClick = async (sem, batch) => {
-    const url = import.meta.env.VITE_API;
-    let registrationNum = registrationNumber;
-    if (registrationNumber === authorizedRegistrationNumber) {
-      registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
-    }
+  const handleSemesterClick = useCallback(
+    async (sem, batch) => {
+      const url = import.meta.env.VITE_API;
+      let registrationNum = registrationNumber;
 
-    // Ensure batchYear is not null
-    let batchYear =
-      batch || localStorage.getItem(`batchYear_${registrationNum}`);
+      // Handle authorization and hidden registration numbers
+      if (registrationNumber === authorizedRegistrationNumber) {
+        registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
+      }
 
-    const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
-    const storedResult = localStorage.getItem(storageKey);
+      let batchYear =
+        batch || localStorage.getItem(`batchYear_${registrationNum}`);
+      const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
+      const sgpaKey = `${registrationNum}_results`;
+      const storedResult = localStorage.getItem(storageKey);
 
-    if (storedResult) {
-      if (!storedResult.trim()) {
-        localStorage.removeItem(storageKey); // Remove empty stored data
-      } else {
-        setResultsHtml(storedResult);
-        const popupWindow = window.open("", "_blank", "width=1100,height=650");
-        popupWindow.document.write(`
-        <html>
-          <head>
-            <title>Results</title>
-            <link rel="icon" type="image/png" href="/icons/gvp.png">
-          </head>
-          <body>
-            ${storedResult}
-          </body>
-        </html>
-      `);
+      if (storedResult) {
+        if (!storedResult.trim()) {
+          localStorage.removeItem(storageKey);
+        } else {
+          setResultsHtml(storedResult);
+          showPopup(storedResult);
+
+          // Update SGPA info
+          const sgpa = extractSGPA(storedResult);
+          let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
+          sgpaData[`${sem}`] = sgpa;
+          localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
+          setSgpaInfo(sgpaData); // Update SGPA info for the current registration number
+          return;
+        }
+      }
+
+      const payloadData = await getPayload(
+        registrationNum,
+        batchYear,
+        sem,
+        urls
+      );
+      if (!payloadData) {
+        console.error("Invalid payload data.");
         return;
       }
-    }
 
-    const payloadData = await getPayload(registrationNum, batchYear, sem, urls);
-    if (!payloadData) {
-      console.error("Invalid payload data.");
-      return;
-    }
+      const payload = {
+        url: payloadData[0],
+        payload: payloadData[1],
+      };
 
-    const payload = {
-      url: payloadData[0],
-      payload: payloadData[1],
-    };
+      try {
+        const response = await axios.post(url, payload);
+        const cleanedData = cleanResponseData(response.data);
 
-    try {
-      const response = await axios.post(url, payload);
-      const cleanedData = cleanResponseData(response.data);
+        if (cleanedData.trim()) {
+          setResultsHtml(cleanedData);
+          localStorage.setItem(storageKey, cleanedData);
 
-      if (cleanedData.trim()) {
-        setResultsHtml(cleanedData);
-        localStorage.setItem(storageKey, cleanedData); // Store with updated key
-      } else {
-        console.warn("Received empty result data.");
+          const sgpa = extractSGPA(cleanedData);
+          let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
+          sgpaData[`${sem}`] = sgpa;
+          localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
+
+          // Update SGPA info
+          setSgpaInfo(sgpaData);
+          showPopup(cleanedData);
+        } else {
+          console.warn("Received empty result data.");
+        }
+      } catch (error) {
+        console.error("Error fetching result data:", error.message);
       }
-
-      const popupWindow = window.open("", "_blank", "width=1100,height=650");
-      popupWindow.document.write(`
-      <html>
-        <head>
-          <title>Results</title>
-          <link rel="icon" type="image/png" href="/icons/gvp.png">
-        </head>
-        <body>
-          ${cleanedData}
-        </body>
-      </html>
-    `);
-    } catch (error) {
-      console.error("Error fetching result data:", error.message);
-    }
-  };
+    },
+    [registrationNumber, authorizedRegistrationNumber]
+  );
 
 
   return (
@@ -193,17 +259,21 @@ const App = () => {
                   <button
                     type="button"
                     key={sem}
-                    onClick={() => handleSemesterClick(sem , batchYear)}
+                    onClick={() => handleSemesterClick(sem, batchYear)}
+                    onMouseEnter={() => setHoveredSemester(sem)}
+                    onMouseLeave={() => setHoveredSemester(null)}
+                    className={hoveredSemester === sem ? "hovered" : ""}
                   >
-                    {sem}
+                    {hoveredSemester === sem
+                      ? sgpaInfo[`${sem}`]
+                        ? `SGPA: ${sgpaInfo[`${sem}`].toFixed(2)}`
+                        : sem
+                      : sem}
                   </button>
+                  
                 ))}
               </div>
             )}
-          {registrationNumber ===
-            import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS && (
-            <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
-          )}
         </header>
       </div>
     </div>
