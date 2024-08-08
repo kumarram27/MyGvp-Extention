@@ -117,28 +117,21 @@ const App = () => {
     if (popupWindow) {
       popupWindow.document.open();
       popupWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Results</title>
-          <link rel="icon" type="image/png" href="/icons/gvp.png">
-          <style>
-            body { font-family: Arial, sans-serif; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { padding: 8px; text-align: center; border: 1px solid #ddd; }
-            th { background-color: #f2f2f2; }
-          </style>
-        </head>
-        <body>
-          ${storedResult}
-        </body>
-      </html>
-    `);
-      popupWindow.document.close();
-    } else {
-      console.error("Failed to open popup window.");
-    }
-  };
+          <html>
+            <head>
+              <title>Results</title>
+              <link rel="icon" type="image/png" href="/icons/gvp.png">
+            </head>
+            <body>
+              ${storedResult}
+            </body>
+          </html>
+        `);
+        popupWindow.document.close();
+      } else {
+        console.error("Failed to open popup window.");
+      }
+    };
 
   const cleanResponseData = (data) => {
     const cleanedData = data.split("\n").slice(1, -2).join("\n");
