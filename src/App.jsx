@@ -13,13 +13,14 @@ const App = () => {
   const [resultsHtml, setResultsHtml] = useState("");
   const [batchYearOptions, setBatchYearOptions] = useState([]);
   const [hoveredSemester, setHoveredSemester] = useState(null);
-  const [sgpaInfo, setSgpaInfo] = useState({});
+  const [sgpaInfo, setSgpaInfo] = useState(localStorage.getItem(`${registrationNumber}_results`) || {});
 
   const authorizedRegistrationNumber = import.meta.env
     .VITE_AUTHORIZED_REGISTRATION_NUMBER;
   const hiddenRegistrationNumbers = (
     import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS || ""
   ).split(",");
+  const server = import.meta.env.VITE_SERVER_URL;
 
   useEffect(() => {
     const availableBatchYears = Object.keys(urls).map((year) => year);
@@ -29,7 +30,8 @@ const App = () => {
       const storedBatchYear = localStorage.getItem(
         `batchYear_${registrationNumber}`
       );
-
+      const sgpaData = JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
+      setSgpaInfo(sgpaData);
       if (storedBatchYear) {
         setBatchYear(storedBatchYear);
       } else if (
@@ -38,13 +40,13 @@ const App = () => {
       ) {
         const extractedBatchYear = extractBatchYear(registrationNumber);
         setBatchYear(extractedBatchYear);
-        localStorage.setItem(
-          `batchYear_${registrationNumber}`,
-          extractedBatchYear
-        );
+        localStorage.setItem("registrationNumber", registrationNumber);
+        localStorage.setItem(`batchYear_${registrationNumber}`,extractedBatchYear);
       } else if (registrationNumber === authorizedRegistrationNumber) {
+        let registrationNo = registrationNumber;
         const defaultBatchYear = "2021";
         setBatchYear(defaultBatchYear);
+        localStorage.setItem("registrationNumber", registrationNo);
         localStorage.setItem(
           `batchYear_${registrationNumber}`,
           defaultBatchYear
@@ -58,7 +60,7 @@ const App = () => {
   }, [registrationNumber, authorizedRegistrationNumber]);
 
   
-  const handleRegNoChange = useCallback((event) => {
+  const handleRegNoChange = useCallback(async (event) => {
     const { value } = event.target;
     let upperCaseValue = value.toUpperCase();
     setRegistrationNumber(upperCaseValue);
@@ -70,10 +72,29 @@ const App = () => {
     if (upperCaseValue === authorizedRegistrationNumber) {
       upperCaseValue = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
     }
-    const sgpaData =
-      JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
+    if(upperCaseValue.length === 10 || upperCaseValue.length === 12) {
+    const sgpaData =  JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
     setSgpaInfo(sgpaData);
-  }, []);
+    if (Object.keys(sgpaData).length === 0) {
+      try {
+        const response = await axios.get(
+          `${server}/api/get-gpa/${upperCaseValue}`
+        );
+        const data = response.data;
+        if (data) {
+          setSgpaInfo(data.gpas || {});
+          // Optionally, store this data in local storage
+          localStorage.setItem(
+            `${upperCaseValue}_results`,
+            JSON.stringify(data.gpas || {})
+          );
+        }
+      } catch (error) {
+        console.error("Error retrieving GPA data from MongoDB:", error.message);
+      }
+    }
+    }
+  }, [authorizedRegistrationNumber, server]);
 
 
 
@@ -85,15 +106,62 @@ const App = () => {
     [registrationNumber]
   );
 
-  const handleClearRegNo = useCallback(() => {
+  const handleClearRegNo = useCallback(async () => {
     setRegistrationNumber("");
     setBatchYear("");
     setBatchYearOptions([]);
     setSgpaInfo({});
-    localStorage.removeItem("registrationNumber");
-    
-  }, []);
+    if (registrationNumber) {
+      console.log("Registration number:", registrationNumber);
+      const user = localStorage.getItem(`${registrationNumber}_name`);
+      // Get stored GPA data
+      const storedSgpaData =
+        JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
+      console.log("Stored GPA data:", storedSgpaData);
 
+      if (Object.keys(storedSgpaData).length > 0) {
+        try {
+          if (user !== null) {
+            await axios.post(`${server}/api/save-gpa`, {
+              registrationNumber,
+              name: user,
+              gpas: storedSgpaData,
+            });
+            console.log("GPA data sent to MongoDB");
+          }
+          else {
+            await axios.post(`${server}/api/save-gpa`, {
+              registrationNumber,
+              gpas: storedSgpaData,
+            });
+            console.log("GPA data sent to MongoDB");
+          }
+          await axios.post(`${server}/api/save-gpa`, {
+            registrationNumber,
+            name: user,
+            gpas: storedSgpaData,
+          });
+          console.log("GPA data sent to MongoDB");
+        } catch (error) {
+          console.error("Error saving GPA data to MongoDB:", error.message);
+        }
+      }
+      localStorage.removeItem("registrationNumber");
+    }
+  }, [registrationNumber, server]);
+
+  const extractName = (html) => {
+    const nameRegex =
+      /<th align='left'>Name<\/th><td colspan='3'>(.*?)<\/td>/;
+    const nameMatch = html.match(nameRegex);
+    if (!nameMatch) {
+      const nameRegexAlternative =
+        /<b>Name<\/b><\/td><td colspan="4">(.*?)<\/td>/;
+      const nameMatchAlternative = html.match(nameRegexAlternative);
+      return nameMatchAlternative ? nameMatchAlternative[1] : null;
+    }
+    return nameMatch ? nameMatch[1] : null;
+  };
   const extractSGPA = (html) => {
     const sgpaRegex =
       /<th align='left'>SGPA<\/th><td colspan='3' align='center'>\s*([\d.]+)\s*<\/td>/;
@@ -156,6 +224,7 @@ const App = () => {
         batch || localStorage.getItem(`batchYear_${registrationNum}`);
       const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
       const sgpaKey = `${registrationNum}_results`;
+      const Username = `${registrationNum}_name`;
       const storedResult = localStorage.getItem(storageKey);
 
       if (storedResult) {
@@ -167,10 +236,12 @@ const App = () => {
 
           // Update SGPA info
           const sgpa = extractSGPA(storedResult);
+          const name = extractName(storedResult);
           let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
           sgpaData[`${sem}`] = sgpa;
           localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
           setSgpaInfo(sgpaData); // Update SGPA info for the current registration number
+          localStorage.setItem(Username, name);
           return;
         }
       }
@@ -198,11 +269,12 @@ const App = () => {
         if (cleanedData.trim()) {
           setResultsHtml(cleanedData);
           localStorage.setItem(storageKey, cleanedData);
-
+          const name = extractName(cleanedData);
           const sgpa = extractSGPA(cleanedData);
           let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
           sgpaData[`${sem}`] = sgpa;
           localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
+          localStorage.setItem(Username, name);
 
           // Update SGPA info
           setSgpaInfo(sgpaData);

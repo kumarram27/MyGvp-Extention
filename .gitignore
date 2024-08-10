@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist.zip
+dist0.zip
 dist-ssr
 mygvp-server
 mygvp-ex-server
