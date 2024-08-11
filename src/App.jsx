@@ -23,21 +23,9 @@ const App = () => {
   const server = import.meta.env.VITE_SERVER_URL;
 
   useEffect(() => {
-    const availableBatchYears = Object.keys(urls).map((year) => year);
-    setBatchYearOptions(availableBatchYears);
-
-    if (registrationNumber) {
-      const storedBatchYear = localStorage.getItem(
-        `batchYear_${registrationNumber}`
-      );
-      const sgpaData =
-        JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
-      setSgpaInfo(sgpaData);
-      if (storedBatchYear) {
-        setBatchYear(storedBatchYear);
-      } else if (
-        registrationNumber.length === 10 ||
-        registrationNumber.length === 12
+      if (
+        (registrationNumber.length === 10 ||
+        registrationNumber.length === 12 ) && registrationNumber !== hiddenRegistrationNumber
       ) {
         const extractedBatchYear = extractBatchYear(registrationNumber);
         setBatchYear(extractedBatchYear);
@@ -45,6 +33,8 @@ const App = () => {
           `batchYear_${registrationNumber}`,
           extractedBatchYear
         );
+        const availableBatchYears = Object.keys(urls).map((year) => year);
+        setBatchYearOptions(availableBatchYears);
       } else if (registrationNumber === authorizedRegistrationNumber) {
         let registrationNo = hiddenRegistrationNumber;
         const defaultBatchYear = "2021";
@@ -56,7 +46,7 @@ const App = () => {
       } else {
         setBatchYear(null);
       }
-    }
+      
   }, [registrationNumber, hiddenRegistrationNumber,authorizedRegistrationNumber]);
 
   const handleRegNoChange = useCallback(
@@ -210,7 +200,7 @@ const App = () => {
       const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
       const sgpaKey = `${registrationNum}_results`;
       const Username = `${registrationNum}_name`;
-      const storedResult = localStorage.getItem(storageKey);
+      const storedResult = localStorage.getItem(storageKey) || "";
 
       if (storedResult) {
         if (!storedResult.trim()) {
@@ -241,16 +231,14 @@ const App = () => {
         console.error("Invalid payload data.");
         return;
       }
-
       const payload = {
         url: payloadData[0],
         payload: payloadData[1],
       };
 
       try {
-        const response = await axios.post(url, payload);
+        const response = await axios.post(payload.url, payload.payload);
         const cleanedData = cleanResponseData(response.data);
-
         if (cleanedData.trim()) {
           setResultsHtml(cleanedData);
           localStorage.setItem(storageKey, cleanedData);
@@ -271,7 +259,7 @@ const App = () => {
         console.error("Error fetching result data:", error.message);
       }
     },
-    [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber]
+    [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber,server]
   );
   
   
