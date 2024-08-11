@@ -6,19 +6,19 @@ import urls from "./links";
 import Dropdown from "./Dropdown";
 
 const App = () => {
-  const [registrationNumber, setRegistrationNumber] = useState(
-    localStorage.getItem("registrationNumber") || ""
-  );
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [batchYear, setBatchYear] = useState("");
   const [resultsHtml, setResultsHtml] = useState("");
   const [batchYearOptions, setBatchYearOptions] = useState([]);
   const [hoveredSemester, setHoveredSemester] = useState(null);
-  const [sgpaInfo, setSgpaInfo] = useState(localStorage.getItem(`${registrationNumber}_results`) || {});
+  const [sgpaInfo, setSgpaInfo] = useState(
+    localStorage.getItem(`${registrationNumber}_results`) || {}
+  );
 
   const authorizedRegistrationNumber = import.meta.env
     .VITE_AUTHORIZED_REGISTRATION_NUMBER;
-  const hiddenRegistrationNumbers = (
-    import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS || ""
+  const hiddenRegistrationNumber = (
+    import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBER || ""
   ).split(",");
   const server = import.meta.env.VITE_SERVER_URL;
 
@@ -30,7 +30,8 @@ const App = () => {
       const storedBatchYear = localStorage.getItem(
         `batchYear_${registrationNumber}`
       );
-      const sgpaData = JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
+      const sgpaData =
+        JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
       setSgpaInfo(sgpaData);
       if (storedBatchYear) {
         setBatchYear(storedBatchYear);
@@ -40,63 +41,63 @@ const App = () => {
       ) {
         const extractedBatchYear = extractBatchYear(registrationNumber);
         setBatchYear(extractedBatchYear);
-        localStorage.setItem("registrationNumber", registrationNumber);
-        localStorage.setItem(`batchYear_${registrationNumber}`,extractedBatchYear);
-      } else if (registrationNumber === authorizedRegistrationNumber) {
-        let registrationNo = registrationNumber;
-        const defaultBatchYear = "2021";
-        setBatchYear(defaultBatchYear);
-        localStorage.setItem("registrationNumber", registrationNo);
         localStorage.setItem(
           `batchYear_${registrationNumber}`,
+          extractedBatchYear
+        );
+      } else if (registrationNumber === authorizedRegistrationNumber) {
+        let registrationNo = hiddenRegistrationNumber;
+        const defaultBatchYear = "2021";
+        setBatchYear(defaultBatchYear);
+        localStorage.setItem(
+          `batchYear_${registrationNo}`,
           defaultBatchYear
         );
       } else {
         setBatchYear(null);
       }
-
-      localStorage.setItem("registrationNumber", registrationNumber);
     }
-  }, [registrationNumber, authorizedRegistrationNumber]);
+  }, [registrationNumber, hiddenRegistrationNumber,authorizedRegistrationNumber]);
 
-  
-  const handleRegNoChange = useCallback(async (event) => {
-    const { value } = event.target;
-    let upperCaseValue = value.toUpperCase();
-    setRegistrationNumber(upperCaseValue);
+  const handleRegNoChange = useCallback(
+    async (event) => {
+      const { value } = event.target;
+      let upperCaseValue = value.toUpperCase();
+      setRegistrationNumber(upperCaseValue);
+      setResultsHtml("");
+      setBatchYear("");
 
-    // Clear results and batch year
-    setResultsHtml("");
-    setBatchYear("");
-
-    if (upperCaseValue === authorizedRegistrationNumber) {
-      upperCaseValue = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
-    }
-    if(upperCaseValue.length === 10 || upperCaseValue.length === 12) {
-    const sgpaData =  JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
-    setSgpaInfo(sgpaData);
-    if (Object.keys(sgpaData).length === 0) {
-      try {
-        const response = await axios.get(
-          `${server}/api/get-gpa/${upperCaseValue}`
-        );
-        const data = response.data;
-        if (data) {
-          setSgpaInfo(data.gpas || {});
-          // Optionally, store this data in local storage
-          localStorage.setItem(
-            `${upperCaseValue}_results`,
-            JSON.stringify(data.gpas || {})
-          );
-        }
-      } catch (error) {
-        console.error("Error retrieving GPA data from MongoDB:", error.message);
+      if (upperCaseValue === authorizedRegistrationNumber) {
+        upperCaseValue = hiddenRegistrationNumber;
       }
-    }
-    }
-  }, [authorizedRegistrationNumber, server]);
-
-
+      if(upperCaseValue.length === 10 || upperCaseValue.length === 12) {
+        const sgpaData =  JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
+        setSgpaInfo(sgpaData);
+        if (Object.keys(sgpaData).length === 0) {
+          try {
+            const response = await axios.get(
+              `${server}/api/get-gpa/${upperCaseValue}`
+            );
+            const data = response.data;
+            if (data) {
+              setSgpaInfo(data.gpas || {});
+              // Optionally, store this data in local storage
+              localStorage.setItem(
+                `${upperCaseValue}_results`,
+                JSON.stringify(data.gpas || {})
+              );
+            }
+          } catch (error) {
+            console.error(
+              "Error retrieving GPA data from MongoDB:"
+              // , error.message
+            );
+          }
+        }
+      }
+    },
+    [authorizedRegistrationNumber, hiddenRegistrationNumber, server]
+  );
 
   const handleBatchYearChange = useCallback(
     (selectedYear) => {
@@ -128,8 +129,7 @@ const App = () => {
               gpas: storedSgpaData,
             });
             console.log("GPA data sent to MongoDB");
-          }
-          else {
+          } else {
             await axios.post(`${server}/api/save-gpa`, {
               registrationNumber,
               gpas: storedSgpaData,
@@ -151,8 +151,7 @@ const App = () => {
   }, [registrationNumber, server]);
 
   const extractName = (html) => {
-    const nameRegex =
-      /<th align='left'>Name<\/th><td colspan='3'>(.*?)<\/td>/;
+    const nameRegex =/<th align='left'>Name<\/th><td colspan='3'>(.*?)<\/td>/;
     const nameMatch = html.match(nameRegex);
     if (!nameMatch) {
       const nameRegexAlternative =
@@ -195,11 +194,11 @@ const App = () => {
             </body>
           </html>
         `);
-        popupWindow.document.close();
-      } else {
-        console.error("Failed to open popup window.");
-      }
-    };
+      popupWindow.document.close();
+    } else {
+      console.error("Failed to open popup window.");
+    }
+  };
 
   const cleanResponseData = (data) => {
     const cleanedData = data.split("\n").slice(1, -2).join("\n");
@@ -217,7 +216,7 @@ const App = () => {
 
       // Handle authorization and hidden registration numbers
       if (registrationNumber === authorizedRegistrationNumber) {
-        registrationNum = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS;
+        registrationNum = hiddenRegistrationNumber;
       }
 
       let batchYear =
@@ -286,10 +285,10 @@ const App = () => {
         console.error("Error fetching result data:", error.message);
       }
     },
-    [registrationNumber, authorizedRegistrationNumber]
+    [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber]
   );
-
-
+  
+  
   return (
     <div className="App">
       <div className="container">
@@ -317,7 +316,7 @@ const App = () => {
           </div>
           {batchYear &&
             registrationNumber !==
-              import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS &&
+              hiddenRegistrationNumber &&
             urls[batchYear] && (
               <div className="button-grid">
                 {Object.keys(urls[batchYear]).map((sem) => (
@@ -339,7 +338,7 @@ const App = () => {
               </div>
             )}
           {registrationNumber ===
-            import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBERS && (
+            hiddenRegistrationNumber && (
             <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
           )}
         </header>
