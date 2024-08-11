@@ -70,7 +70,7 @@ const App = () => {
       if (upperCaseValue === authorizedRegistrationNumber) {
         upperCaseValue = hiddenRegistrationNumber;
       }
-      if(upperCaseValue.length === 10 || upperCaseValue.length === 12) {
+      if(upperCaseValue.length === 10 || upperCaseValue.length === 12 ) {
         const sgpaData =  JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
         setSgpaInfo(sgpaData);
         if (Object.keys(sgpaData).length === 0) {
@@ -122,20 +122,6 @@ const App = () => {
 
       if (Object.keys(storedSgpaData).length > 0) {
         try {
-          if (user !== null) {
-            await axios.post(`${server}/api/save-gpa`, {
-              registrationNumber,
-              name: user,
-              gpas: storedSgpaData,
-            });
-            console.log("GPA data sent to MongoDB");
-          } else {
-            await axios.post(`${server}/api/save-gpa`, {
-              registrationNumber,
-              gpas: storedSgpaData,
-            });
-            console.log("GPA data sent to MongoDB");
-          }
           await axios.post(`${server}/api/save-gpa`, {
             registrationNumber,
             name: user,
@@ -211,7 +197,7 @@ const App = () => {
 
   const handleSemesterClick = useCallback(
     async (sem, batch) => {
-      const url = import.meta.env.VITE_API;
+      const url = server;
       let registrationNum = registrationNumber;
 
       // Handle authorization and hidden registration numbers
