@@ -7,7 +7,9 @@ import Dropdown from "./Dropdown";
 
 const App = () => {
   const [registrationNumber, setRegistrationNumber] = useState("");
-  const [batchYear, setBatchYear] = useState("");
+  const [batchYear, setBatchYear] = useState(
+    localStorage.getItem(`batchYear_${registrationNumber}`) || ""
+  );
   const [resultsHtml, setResultsHtml] = useState("");
   const [batchYearOptions, setBatchYearOptions] = useState([]);
   const [hoveredSemester, setHoveredSemester] = useState(null);
@@ -15,39 +17,30 @@ const App = () => {
     localStorage.getItem(`${registrationNumber}_results`) || {}
   );
 
-  const authorizedRegistrationNumber = import.meta.env
-    .VITE_AUTHORIZED_REGISTRATION_NUMBER;
-  const hiddenRegistrationNumber = (
-    import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBER || ""
-  ).split(",");
+  const authorizedRegistrationNumber = import.meta.env.VITE_AUTHORIZED_REGISTRATION_NUMBER;
+  const hiddenRegistrationNumber = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBER;
   const server = import.meta.env.VITE_SERVER_URL;
 
   useEffect(() => {
-      if (
-        (registrationNumber.length === 10 ||
-        registrationNumber.length === 12 ) && registrationNumber !== hiddenRegistrationNumber
-      ) {
-        const extractedBatchYear = extractBatchYear(registrationNumber);
-        setBatchYear(extractedBatchYear);
-        localStorage.setItem(
-          `batchYear_${registrationNumber}`,
-          extractedBatchYear
-        );
-        const availableBatchYears = Object.keys(urls).map((year) => year);
-        setBatchYearOptions(availableBatchYears);
-      } else if (registrationNumber === authorizedRegistrationNumber) {
-        let registrationNo = hiddenRegistrationNumber;
-        const defaultBatchYear = "2021";
-        setBatchYear(defaultBatchYear);
-        localStorage.setItem(
-          `batchYear_${registrationNo}`,
-          defaultBatchYear
-        );
-      } else {
-        setBatchYear(null);
-      }
-      
-  }, [registrationNumber, hiddenRegistrationNumber,authorizedRegistrationNumber]);
+    if (
+      (registrationNumber.length === 10 ||
+      registrationNumber.length === 12 )&& registrationNumber !== hiddenRegistrationNumber
+    ) {
+      const extractedBatchYear = extractBatchYear(registrationNumber);
+      setBatchYear(extractedBatchYear);
+      localStorage.setItem(
+        `batchYear_${registrationNumber}`,
+        extractedBatchYear
+      );
+      const availableBatchYears = Object.keys(urls).map((year) => year);
+      setBatchYearOptions(availableBatchYears);
+    }else if (registrationNumber === authorizedRegistrationNumber) {
+      setBatchYear(2021);
+    } 
+    else {
+      setBatchYear(null);
+    }
+  }, [registrationNumber, authorizedRegistrationNumber, hiddenRegistrationNumber]);
 
   const handleRegNoChange = useCallback(
     async (event) => {
@@ -57,11 +50,20 @@ const App = () => {
       setResultsHtml("");
       setBatchYear("");
 
-      if (upperCaseValue === authorizedRegistrationNumber) {
-        upperCaseValue = hiddenRegistrationNumber;
+      if (upperCaseValue === hiddenRegistrationNumber) {
+        return;
       }
-      if(upperCaseValue.length === 10 || upperCaseValue.length === 12 ) {
-        const sgpaData =  JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
+
+      if (
+        upperCaseValue.length === 10 ||
+        upperCaseValue.length === 12 ||
+        upperCaseValue === authorizedRegistrationNumber
+      ) {
+        if (upperCaseValue === authorizedRegistrationNumber) {
+          upperCaseValue = hiddenRegistrationNumber;
+        }
+        const sgpaData =
+          JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
         setSgpaInfo(sgpaData);
         if (Object.keys(sgpaData).length === 0) {
           try {
@@ -71,7 +73,6 @@ const App = () => {
             const data = response.data;
             if (data) {
               setSgpaInfo(data.gpas || {});
-              // Optionally, store this data in local storage
               localStorage.setItem(
                 `${upperCaseValue}_results`,
                 JSON.stringify(data.gpas || {})
@@ -86,7 +87,7 @@ const App = () => {
         }
       }
     },
-    [authorizedRegistrationNumber, hiddenRegistrationNumber, server]
+    [server, authorizedRegistrationNumber, hiddenRegistrationNumber]
   );
 
   const handleBatchYearChange = useCallback(
@@ -103,9 +104,7 @@ const App = () => {
     setBatchYearOptions([]);
     setSgpaInfo({});
     if (registrationNumber) {
-      console.log("Registration number:", registrationNumber);
       const user = localStorage.getItem(`${registrationNumber}_name`);
-      // Get stored GPA data
       const storedSgpaData =
         JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
       console.log("Stored GPA data:", storedSgpaData);
@@ -160,16 +159,16 @@ const App = () => {
     if (popupWindow) {
       popupWindow.document.open();
       popupWindow.document.write(`
-          <html>
-            <head>
-              <title>Results</title>
-              <link rel="icon" type="image/png" href="/icons/gvp.png">
-            </head>
-            <body>
-              ${storedResult}
-            </body>
-          </html>
-        `);
+        <html>
+          <head>
+            <title>Results</title>
+            <link rel="icon" type="image/png" href="/icons/gvp.png">
+          </head>
+          <body>
+            ${storedResult}
+          </body>
+        </html>
+      `);
       popupWindow.document.close();
     } else {
       console.error("Failed to open popup window.");
@@ -187,14 +186,14 @@ const App = () => {
 
   const handleSemesterClick = useCallback(
     async (sem, batch) => {
-      const url = server;
       let registrationNum = registrationNumber;
-
-      // Handle authorization and hidden registration numbers
-      if (registrationNumber === authorizedRegistrationNumber) {
+      if (registrationNum === hiddenRegistrationNumber) {
+        console.error("Access denied for this registration number.");
+        return;
+      }
+      if(registrationNum === authorizedRegistrationNumber){
         registrationNum = hiddenRegistrationNumber;
       }
-
       let batchYear =
         batch || localStorage.getItem(`batchYear_${registrationNum}`);
       const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
@@ -209,13 +208,12 @@ const App = () => {
           setResultsHtml(storedResult);
           showPopup(storedResult);
 
-          // Update SGPA info
           const sgpa = extractSGPA(storedResult);
           const name = extractName(storedResult);
           let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
           sgpaData[`${sem}`] = sgpa;
           localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
-          setSgpaInfo(sgpaData); // Update SGPA info for the current registration number
+          setSgpaInfo(sgpaData);
           localStorage.setItem(Username, name);
           return;
         }
@@ -249,7 +247,6 @@ const App = () => {
           localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
           localStorage.setItem(Username, name);
 
-          // Update SGPA info
           setSgpaInfo(sgpaData);
           showPopup(cleanedData);
         } else {
@@ -261,8 +258,8 @@ const App = () => {
     },
     [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber,server]
   );
-  
-  
+
+
   return (
     <div className="App">
       <div className="container">
@@ -289,8 +286,7 @@ const App = () => {
             )}
           </div>
           {batchYear &&
-            registrationNumber !==
-              hiddenRegistrationNumber &&
+            registrationNumber !== hiddenRegistrationNumber &&
             urls[batchYear] && (
               <div className="button-grid">
                 {Object.keys(urls[batchYear]).map((sem) => (
@@ -311,8 +307,7 @@ const App = () => {
                 ))}
               </div>
             )}
-          {registrationNumber ===
-            hiddenRegistrationNumber && (
+          {registrationNumber === hiddenRegistrationNumber && (
             <p style={{ margin: "20px 0", color: "red" }}>Access denied.</p>
           )}
         </header>
