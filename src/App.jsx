@@ -262,6 +262,9 @@ const App = () => {
 
   return (
     <div className="App">
+    <div className="navbar">
+      
+    </div>
       <div className="container">
         <header className="App-header">
           <div className="reg-input-container">
