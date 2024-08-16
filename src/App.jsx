@@ -256,7 +256,7 @@ const App = () => {
         console.error("Error fetching result data:", error.message);
       }
     },
-    [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber,server]
+    [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber]
   );
 
 
