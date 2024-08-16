@@ -203,6 +203,12 @@ button:not(.dropdown-button):hover {
     background-color: #0f0e0e;
   }
 
+  .title {
+    color: #fff;
+  }
+
+  
+
   .container {
     background-color: #3e3b46;
   }
