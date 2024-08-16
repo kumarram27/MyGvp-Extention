@@ -276,7 +276,11 @@ const App = () => {
             </a>
             <div className="title">MyGVP</div>
           </div>
-          <a href="" target="_blank" rel="noreferrer">
+          <a
+            href="https://github.com/kumarram27/MyGvp-Extention"
+            target="_blank"
+            rel="noreferrer"
+          >
             <img
               src="/icons/git.svg"
               height={36}
