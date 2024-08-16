@@ -262,10 +262,30 @@ const App = () => {
 
   return (
     <div className="App">
-    <div className="navbar">
-      
-    </div>
       <div className="container">
+        <div className="navbar">
+          <div className="logo-title">
+            <a href="https://gvpce.ac.in/" target="_blank" rel="noreferrer">
+              <img
+                src="/icons/android-chrome-512x512.png"
+                height={36}
+                width={36}
+                alt="GVP Logo"
+                className="logo"
+              />
+            </a>
+            <div className="title">MyGVP</div>
+          </div>
+          <a href="" target="_blank" rel="noreferrer">
+            <img
+              src="/icons/git.svg"
+              height={36}
+              width={36}
+              alt="GitHub Logo"
+              className="github"
+            />
+          </a>
+        </div>
         <header className="App-header">
           <div className="reg-input-container">
             <input
