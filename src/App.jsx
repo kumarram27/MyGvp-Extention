@@ -265,7 +265,7 @@ const App = () => {
       <div className="container">
         <div className="navbar">
           <div className="logo-title">
-            <a href="https://gvpce.ac.in/" target="_blank" rel="noreferrer">
+            <a href="https://mygvp.github.io/" target="_blank" rel="noreferrer">
               <img
                 src="/icons/android-chrome-512x512.png"
                 height={36}
