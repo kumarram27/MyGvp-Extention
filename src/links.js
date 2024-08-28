@@ -54,6 +54,8 @@ const urls = {
   2023: {
     "Sem 1":
       "http://gvpce.ac.in:10000/GVP%20Results/RegularResults.jsp?semname=B.%20Tech.%20I%20Semester%20(R-2022)%20(For%202023%20Admitted%20Batches)%20Regular%20Examination%20Results,%20February-2024&regulation=R-2022&semester=1&lastdaterev=12-03-2024",
+    "Sem 2":
+      "http://gvpce.ac.in:10000/GVP%20Results/RegularResults.jsp?semname=B.%20Tech.%20II%20Semester%20(R-2022)%20(For%202023%20Admitted%20Batches)%20Regular%20Examination%20Results,%20July%202024&regulation=R-2022&semester=2&lastdaterev=21-08-2024",
   },
   // Add more URLs for other batch years and semesters as needed
 };
