@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./App.css";
 import { getPayload, extractBatchYear } from "./mygvp";
@@ -268,8 +268,8 @@ const App = () => {
             <a href="https://mygvp.github.io/" target="_blank" rel="noreferrer">
               <img
                 src="/icons/android-chrome-512x512.png"
-                height={36}
-                width={36}
+                height={27}
+                width={27}
                 alt="GVP Logo"
                 className="logo"
               />
@@ -283,8 +283,8 @@ const App = () => {
           >
             <img
               src="/icons/git.svg"
-              height={36}
-              width={36}
+              height={27}
+              width={27}
               alt="GitHub Logo"
               className="github"
             />
