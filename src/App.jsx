@@ -122,6 +122,7 @@ const App = () => {
         }
       }
       localStorage.removeItem("registrationNumber");
+      localStorage.removeItem(`${registrationNumber}_results`);
     }
   }, [registrationNumber, server]);
 
