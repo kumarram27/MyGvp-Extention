@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./App.css";
 import { getPayload, extractBatchYear } from "./mygvp";
-import urls from "./links";
 import Dropdown from "./Dropdown";
 
 const App = () => {
@@ -13,18 +12,54 @@ const App = () => {
   const [resultsHtml, setResultsHtml] = useState("");
   const [batchYearOptions, setBatchYearOptions] = useState([]);
   const [hoveredSemester, setHoveredSemester] = useState(null);
+  const [urls, setUrls] = useState(localStorage.getItem("urls") ||{});
   const [sgpaInfo, setSgpaInfo] = useState(
     localStorage.getItem(`${registrationNumber}_results`) || {}
   );
 
-  const authorizedRegistrationNumber = import.meta.env.VITE_AUTHORIZED_REGISTRATION_NUMBER;
-  const hiddenRegistrationNumber = import.meta.env.VITE_HIDDEN_REGISTRATION_NUMBER;
+  const authorizedRegistrationNumber = import.meta.env
+    .VITE_AUTHORIZED_REGISTRATION_NUMBER;
+  const hiddenRegistrationNumber = import.meta.env
+    .VITE_HIDDEN_REGISTRATION_NUMBER;
   const server = import.meta.env.VITE_SERVER_URL;
 
   useEffect(() => {
+    const fetchUrls = async () => {
+      try {
+        let storedUrls = localStorage.getItem("urls");
+
+        // Ensure it's a valid JSON string before parsing
+        if (storedUrls) {
+          storedUrls = JSON.parse(storedUrls);
+        } else {
+          storedUrls = null;
+        }
+
+        console.log("Stored URLs:", storedUrls);
+
+        if (!storedUrls) {
+          const response = await axios.get(`${server}/api/getUrls`);
+          storedUrls = response.data?.urls || {};
+
+          console.log("Fetched URLs from MongoDB:", storedUrls);
+
+          localStorage.setItem("urls", JSON.stringify(storedUrls));
+        }
+
+        setUrls(storedUrls);
+      } catch (error) {
+        console.error("Error retrieving URLs from MongoDB:", error);
+        setUrls({});
+      }
+    };
+
+    fetchUrls();
+  }, [server]);
+
+  useEffect(() => {
     if (
-      (registrationNumber.length === 10 ||
-      registrationNumber.length === 12 )&& registrationNumber !== hiddenRegistrationNumber
+      (registrationNumber.length === 10 || registrationNumber.length === 12) &&
+      registrationNumber !== hiddenRegistrationNumber
     ) {
       const extractedBatchYear = extractBatchYear(registrationNumber);
       setBatchYear(extractedBatchYear);
@@ -32,15 +67,22 @@ const App = () => {
         `batchYear_${registrationNumber}`,
         extractedBatchYear
       );
-      const availableBatchYears = Object.keys(urls).map((year) => year);
+
+      const availableBatchYears = Object.keys(urls || {}).map((year) => year);
       setBatchYearOptions(availableBatchYears);
-    }else if (registrationNumber === authorizedRegistrationNumber) {
+    } else if (registrationNumber === authorizedRegistrationNumber) {
       setBatchYear(2021);
-    } 
-    else {
+    } else {
       setBatchYear(null);
     }
-  }, [registrationNumber, authorizedRegistrationNumber, hiddenRegistrationNumber]);
+  }, [
+    registrationNumber,
+    authorizedRegistrationNumber,
+    hiddenRegistrationNumber,
+    server,
+    urls,
+  ]);
+
 
   const handleRegNoChange = useCallback(
     async (event) => {
@@ -62,15 +104,19 @@ const App = () => {
         if (upperCaseValue === authorizedRegistrationNumber) {
           upperCaseValue = hiddenRegistrationNumber;
         }
-        const sgpaData =
-          JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
+
+        // Retrieve SGPA data from localStorage
+        const sgpaData = JSON.parse(localStorage.getItem(`${upperCaseValue}_results`)) || {};
         setSgpaInfo(sgpaData);
+
+        // If SGPA data is missing, fetch from MongoDB
         if (Object.keys(sgpaData).length === 0) {
           try {
             const response = await axios.get(
               `${server}/api/get-gpa/${upperCaseValue}`
             );
             const data = response.data;
+
             if (data) {
               setSgpaInfo(data.gpas || {});
               localStorage.setItem(
@@ -79,10 +125,7 @@ const App = () => {
               );
             }
           } catch (error) {
-            console.error(
-              "Error retrieving GPA data from MongoDB:"
-              // , error.message
-            );
+            console.error("Error retrieving GPA data from MongoDB:");
           }
         }
       }
@@ -104,56 +147,38 @@ const App = () => {
     setBatchYearOptions([]);
     setSgpaInfo({});
     if (registrationNumber) {
-      const user = localStorage.getItem(`${registrationNumber}_name`);
-      const storedSgpaData =
-        JSON.parse(localStorage.getItem(`${registrationNumber}_results`)) || {};
-      console.log("Stored GPA data:", storedSgpaData);
-
-      if (Object.keys(storedSgpaData).length > 0) {
-        try {
-          await axios.post(`${server}/api/save-gpa`, {
-            registrationNumber,
-            name: user,
-            gpas: storedSgpaData,
-          });
-          console.log("GPA data sent to MongoDB");
-        } catch (error) {
-          console.error("Error saving GPA data to MongoDB:", error.message);
-        }
-      }
       localStorage.removeItem("registrationNumber");
-      localStorage.removeItem(`${registrationNumber}_results`);
     }
-  }, [registrationNumber, server]);
+  }, [registrationNumber]);
 
   const extractName = (html) => {
-    const nameRegex =/<th align='left'>Name<\/th><td colspan='3'>(.*?)<\/td>/;
+    const nameRegex = /<th[^>]*>\s*Name\s*<\/th>\s*<td[^>]*>\s*(.*?)\s*<\/td>/i;
     const nameMatch = html.match(nameRegex);
+
     if (!nameMatch) {
       const nameRegexAlternative =
-        /<b>Name<\/b><\/td><td colspan="4">(.*?)<\/td>/;
+        /<b>\s*Name\s*<\/b>\s*<\/td>\s*<td[^>]*colspan=['"]?\d+['"]?[^>]*>\s*(.*?)\s*<\/td>/i;
       const nameMatchAlternative = html.match(nameRegexAlternative);
-      return nameMatchAlternative ? nameMatchAlternative[1] : null;
+      return nameMatchAlternative ? nameMatchAlternative[1].trim() : null;
     }
-    return nameMatch ? nameMatch[1] : null;
+    return nameMatch ? nameMatch[1].trim() : null;
   };
+
   const extractSGPA = (html) => {
-    const sgpaRegex =
-      /<th align='left'>SGPA<\/th><td colspan='3' align='center'>\s*([\d.]+)\s*<\/td>/;
+    const sgpaRegex = /<th>\s*SGPA\s*<\/th>\s*<th[^>]*>\s*([\d.]+)\s*<\/th>/i;
     const sgpaMatch = html.match(sgpaRegex);
 
     if (!sgpaMatch) {
-      const sgpaRegexAlternative =
-        /<b>SGPA<\/b><\/td><td colspan=4><p style='text-align:center;'>([\d.]+)<\/p><\/td>/;
-      const sgpaMatchAlternative = html.match(sgpaRegexAlternative);
-      if (sgpaMatchAlternative) {
-        return parseFloat(sgpaMatchAlternative[1]);
-      }
-      return null;
+      const alternativeRegex =
+        /<th>\s*SGPA\s*<\/th>\s*<th[^>]*>\s*([\d.]+)\s*<\/td>/i;
+      const sgpaMatchAlt = html.match(alternativeRegex);
+      return sgpaMatchAlt ? parseFloat(sgpaMatchAlt[1].trim()) : null;
     }
 
-    return parseFloat(sgpaMatch[1]);
+    return parseFloat(sgpaMatch[1].trim());
   };
+
+
 
   const showPopup = (storedResult) => {
     const popupWindow = window.open("", "_blank", "width=1100,height=650");
@@ -177,30 +202,29 @@ const App = () => {
   };
 
   const cleanResponseData = (data) => {
-    const cleanedData = data.split("\n").slice(1, -2).join("\n");
-    const lines = cleanedData.split("\n");
-    if (lines.length > 1) {
-      lines.splice(-2, 1);
-    }
-    return lines.join("\n");
+    const match = data.match(
+      /<h2[^>]*>.*?<\/h2>|<table[^>]*>[\s\S]*?<\/table>/gi
+    );
+    return match ? match.join("\n").trim() : "";
   };
+
+
 
   const handleSemesterClick = useCallback(
     async (sem, batch) => {
       let registrationNum = registrationNumber;
-      if (registrationNum === hiddenRegistrationNumber) {
-        console.error("Access denied for this registration number.");
+      if(registrationNum === hiddenRegistrationNumber){
         return;
       }
-      if(registrationNum === authorizedRegistrationNumber){
+      if (registrationNum === authorizedRegistrationNumber) {
         registrationNum = hiddenRegistrationNumber;
       }
-      let batchYear =
-        batch || localStorage.getItem(`batchYear_${registrationNum}`);
+      let batchYear =  batch || localStorage.getItem(`batchYear_${registrationNum}`);
       const storageKey = `results_${registrationNum}_${batchYear}_${sem}`;
       const sgpaKey = `${registrationNum}_results`;
       const Username = `${registrationNum}_name`;
       const storedResult = localStorage.getItem(storageKey) || "";
+      let urls = JSON.parse(localStorage.getItem("urls"));
 
       if (storedResult) {
         if (!storedResult.trim()) {
@@ -208,7 +232,6 @@ const App = () => {
         } else {
           setResultsHtml(storedResult);
           showPopup(storedResult);
-
           const sgpa = extractSGPA(storedResult);
           const name = extractName(storedResult);
           let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
@@ -216,7 +239,6 @@ const App = () => {
           localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
           setSgpaInfo(sgpaData);
           localStorage.setItem(Username, name);
-          return;
         }
       }
 
@@ -230,36 +252,41 @@ const App = () => {
         console.error("Invalid payload data.");
         return;
       }
+      console.log("Fetched payload data:", payloadData);
       const payload = {
         url: payloadData[0],
         payload: payloadData[1],
       };
 
-      try {
+      try{
         const response = await axios.post(payload.url, payload.payload);
         const cleanedData = cleanResponseData(response.data);
-        if (cleanedData.trim()) {
-          setResultsHtml(cleanedData);
-          localStorage.setItem(storageKey, cleanedData);
-          const name = extractName(cleanedData);
-          const sgpa = extractSGPA(cleanedData);
-          let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
-          sgpaData[`${sem}`] = sgpa;
-          localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
-          localStorage.setItem(Username, name);
-
-          setSgpaInfo(sgpaData);
-          showPopup(cleanedData);
-        } else {
-          console.warn("Received empty result data.");
+        setResultsHtml(cleanedData);
+        showPopup(cleanedData);
+        localStorage.setItem(storageKey, cleanedData);
+        const name = extractName(cleanedData);
+        const sgpa = extractSGPA(cleanedData);
+        let sgpaData = JSON.parse(localStorage.getItem(sgpaKey)) || {};
+        sgpaData[`${sem}`] = sgpa;
+        localStorage.setItem(sgpaKey, JSON.stringify(sgpaData));
+        localStorage.setItem(Username, name);
+        setSgpaInfo(sgpaData);
+        try {
+          await axios.post(`${server}/api/save-gpa`, {
+            registrationNumber: registrationNum,
+            name,
+            gpas: sgpaData,
+          });
+          console.log("GPA data uploaded to MongoDB successfully.");
+        } catch (error) {
+          console.error("Error uploading GPA data to MongoDB:", error.message);
         }
       } catch (error) {
         console.error("Error fetching result data:", error.message);
       }
     },
-    [registrationNumber, hiddenRegistrationNumber ,authorizedRegistrationNumber]
+    [registrationNumber, server, authorizedRegistrationNumber, hiddenRegistrationNumber]
   );
-
 
   return (
     <div className="App">

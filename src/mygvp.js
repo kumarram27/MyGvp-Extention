@@ -1,5 +1,3 @@
-// mygvp.js
-
 import axios from "axios";
 import cheerio from "cheerio";
 
@@ -14,16 +12,14 @@ const fetchResultData = async (url, payload) => {
 };
 
 const extractBatchYear = (registrationNumber) => {
-  if (/^20/.test(registrationNumber) && registrationNumber.length === 10)
-    return "2020";
-  if (/^21/.test(registrationNumber) && registrationNumber.length === 10)
-    return "2021";
-  if (/^322/.test(registrationNumber) && registrationNumber.length === 12)
-    return "2022";
-  if (/^323/.test(registrationNumber) && registrationNumber.length === 12)
-    return "2023";
+  if (registrationNumber.includes("A")) return "2021";
+
+  const match = registrationNumber.match(/^.(\d{2})/);
+  if (match) return `20${match[1]}`;
+
   return "2021";
 };
+
 
 const parseResult = (data) => {
   const $ = cheerio.load(data);
@@ -33,9 +29,11 @@ const parseResult = (data) => {
 
 const getResults = async (registrationNumber, url) => {
   const parsedUrl = new URL(url);
-  const semname = parsedUrl.searchParams.get("semname");
+  const fileName = parsedUrl.searchParams.get("fileName");
   const regulation = parsedUrl.searchParams.get("regulation");
-  const semesterNo = parsedUrl.searchParams.get("semester");
+  const semester = parsedUrl.searchParams.get("semester");
+  const revaluationDate = parsedUrl.searchParams.get("revaluationDate");
+  const type = parsedUrl.searchParams.get("type");
 
   const constructEndpoint = (url) => {
     return url.replace("btechsearch.asp", "find_info.asp");
@@ -51,12 +49,14 @@ const getResults = async (registrationNumber, url) => {
       u_field: "state",
     };
   } else {
-    endpoint = "http://gvpce.ac.in:10000/GVP%20Results/RegularResults";
+    endpoint = "http://gvpce.ac.in:10000/GVP%20Results/gvpResults";
     payload = {
-      input1: registrationNumber,
-      hidedata: semname,
-      hidedata2: regulation,
-      hidedata3: semesterNo,
+      number: registrationNumber,
+      filename: fileName,
+      regulation: regulation,
+      semester: semester,
+      revaluationdate: revaluationDate,
+      type: type,
     };
   }
   const payloadString = new URLSearchParams(payload).toString();
@@ -71,13 +71,16 @@ const getResults = async (registrationNumber, url) => {
   }
 };
 
+
 const getPayload = async (registrationNumber,batchYear, semester, urls) => {
   const url = urls[batchYear] && urls[batchYear][semester];
   if (url) {
     const parsedUrl = new URL(url);
-    const semname = parsedUrl.searchParams.get("semname");
+    const fileName = parsedUrl.searchParams.get("fileName");
     const regulation = parsedUrl.searchParams.get("regulation");
-    const semesterNo = parsedUrl.searchParams.get("semester");
+    const semester = parsedUrl.searchParams.get("semester");
+    const revaluationDate = parsedUrl.searchParams.get("revaluationDate");
+    const type = parsedUrl.searchParams.get("type");
     const constructEndpoint = (url) => {
       return url.replace("btechsearch.asp", "find_info.asp");
     };
@@ -90,12 +93,14 @@ const getPayload = async (registrationNumber,batchYear, semester, urls) => {
         u_field: "state",
       };
     } else {
-      endpoint = "http://gvpce.ac.in:10000/GVP%20Results/RegularResults";
+      endpoint = "http://gvpce.ac.in:10000/GVP%20Results/gvpResults";
       payload = {
-        input1: registrationNumber,
-        hidedata: semname,
-        hidedata2: regulation,
-        hidedata3: semesterNo,
+        number: registrationNumber,
+        fileName: fileName,
+        regulation: regulation,
+        semester: semester,
+        revaluationDate: revaluationDate,
+        type: type,
       };
     }
     const payloadString = new URLSearchParams(payload).toString();

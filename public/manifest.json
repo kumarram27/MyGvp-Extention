@@ -5,14 +5,14 @@
   "description": "A browser extension for fetching GVP results",
   "action": {
     "default_popup": "index.html",
-    "default_icon": "icons/android-chrome-512x512.png"
+    "default_icon": "/gvp.png"
   },
   "permissions": ["storage", "scripting", "webRequest"],
   "background": {
     "service_worker": "background.js"
   },
   "icons": {
-    "128": "icons/android-chrome-512x512.png"
+    "128": "/gvp.png"
   },
   "host_permissions": ["http://*/*", "https://*/*"]
 }

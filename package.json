@@ -1,6 +1,7 @@
 {
   "name": "mygvp",
   "version": "0.0.0",
+  "homepage": "https://kumardev.me/MyGvp-Extention/",
   "type": "module",
   "scripts": {
     "dev": "vite",
